@@ -322,6 +322,37 @@ func runTests() {
         print("  ℹ️ ThermalMonitor: Non-Apple-Silicon or headless environment (state: \(tReading.thermalState))")
     }
 
+    // H. ThermalHistory 10-Minute Rolling Window (Min / Avg / Max + Pruning)
+    let history = ThermalHistory(windowSeconds: 600.0)
+    history.record(ThermalMonitor.Reading(thermalState: .serious, dieTemperatureC: 90.0,
+                                          cpuTempC: 90.0, gpuTempC: 70.0, batteryTempC: 34.0, storageTempC: 48.0), now: 1000.0)
+    history.record(ThermalMonitor.Reading(thermalState: .nominal, dieTemperatureC: 50.0,
+                                          cpuTempC: 50.0, gpuTempC: 44.0, batteryTempC: 30.0, storageTempC: 40.0), now: 1200.0)
+    // Rapid sub-second refresh at 1200.2s must replace 1200.0s sample rather than double-counting
+    history.record(ThermalMonitor.Reading(thermalState: .nominal, dieTemperatureC: 52.0,
+                                          cpuTempC: 52.0, gpuTempC: 46.0, batteryTempC: 30.0, storageTempC: 40.0), now: 1200.2)
+    history.record(ThermalMonitor.Reading(thermalState: .nominal, dieTemperatureC: 44.0,
+                                          cpuTempC: 44.0, gpuTempC: 40.0, batteryTempC: 28.0, storageTempC: 38.0), now: 1500.0)
+
+    let snapMid = history.snapshot(now: 1500.0)
+    assert(snapMid.windowMinutes == 10, "Window must report 10 minutes")
+    assert(snapMid.sampleCount == 3, "Expected 3 samples after sub-second coalescing, got \(snapMid.sampleCount)")
+    assert(snapMid.cpu?.min == 44.0 && snapMid.cpu?.max == 90.0 && snapMid.cpu?.current == 44.0)
+    assert(abs((snapMid.cpu?.avg ?? 0) - 62.0) < 0.01, "Expected CPU avg 62.0°C ((90+52+44)/3)")
+    assert(snapMid.battery?.min == 28.0 && snapMid.battery?.max == 34.0)
+    assert(snapMid.storage?.min == 38.0 && snapMid.storage?.max == 48.0)
+
+    // Advance past 10 minutes from the initial 90°C spike (1000 + 601 = 1601)
+    let snapPruned = history.snapshot(now: 1601.0)
+    assert(snapPruned.sampleCount == 2, "Old 90°C sample at t=1000 must prune at t=1601")
+    assert(snapPruned.cpu?.max == 52.0 && snapPruned.cpu?.min == 44.0 && abs((snapPruned.cpu?.avg ?? 0) - 48.0) < 0.01)
+
+    // Backwards clock jump resilience
+    history.record(ThermalMonitor.Reading(thermalState: .nominal, dieTemperatureC: 46.0, cpuTempC: 46.0), now: 500.0)
+    let snapReset = history.snapshot(now: 500.0)
+    assert(snapReset.sampleCount == 1 && snapReset.cpu?.current == 46.0)
+    print("  ✅ ThermalHistory (10m Rolling): Min/Avg/Max, sub-second coalescing, 600s pruning & clock-jump resilience verified")
+
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
 

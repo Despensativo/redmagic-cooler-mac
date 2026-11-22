@@ -69,6 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Latest thermal sample, refreshed each tick.
     var thermal = ThermalMonitor.Reading(thermalState: .nominal, dieTemperatureC: nil)
+    /// Rolling 10-minute thermal statistics across CPU, GPU, Battery, and SSD.
+    let thermalHistory = ThermalHistory()
 
     /// Universal Hardware Safety Governor:
     /// Tripped when Mac die temperature drops below Config.Safety.condensationCutoffC (36.0°C).
@@ -141,7 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ble = CoolerBLEManager()
         ble.delegate = self
         led = LedController(ble: ble)
-        thermal = ThermalMonitor.read()
+        sampleThermal()
         evaluateSafetyGovernor(reapplyOnClear: false)
 
         // Built before the menu, which wires a banner straight to them. A
@@ -260,13 +262,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // ── Tick ─────────────────────────────────────────────────────────────────
 
+    /// Reads all hardware thermal sensors and appends the reading to the 10-minute rolling window.
+    func sampleThermal() {
+        thermal = ThermalMonitor.read()
+        thermalHistory.record(thermal)
+    }
+
     /// The master loop, once a second: sample temperature, run the autopilot,
     /// re-assert device state, refresh the UI, and refresh developer probe data.
     private func tick() {
         tickCount += 1
 
         handlePendingProbeCommand()
-        thermal = ThermalMonitor.read()
+        sampleThermal()
         updateSwitchMonitor()
         expireManualTimerIfDue()
         evaluateSafetyGovernor()
@@ -443,7 +451,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func macDidWake() {
         EventLogger.record("system did wake — restoring active cooling mode (\(appMode.rawValue))")
         ThermalMonitor.invalidateCache()
-        thermal = ThermalMonitor.read()
+        sampleThermal()
         syncHardwareToActiveMode(force: true)
         refresh()
     }

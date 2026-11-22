@@ -102,6 +102,8 @@ enum Config {
     enum Timing {
         /// Master tick: telemetry refresh, control loop, and UI refresh.
         static let poll: TimeInterval = 1.0
+        /// Rolling window for Min / Avg / Max thermal statistics (10 minutes).
+        static let thermalHistoryWindow: TimeInterval = 600.0
         /// How often the autopilot re-evaluates, in ticks of `poll`.
         static let autopilotEveryTicks = 3
         /// How often settings are re-asserted to the device, in ticks of `poll`.

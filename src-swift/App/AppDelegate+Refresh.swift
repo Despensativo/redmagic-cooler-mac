@@ -249,7 +249,8 @@ extension AppDelegate {
             gpuTempC: thermal.gpuTempC,
             socTempC: thermal.socTempC,
             batteryTempC: thermal.batteryTempC,
-            storageTempC: thermal.storageTempC))
+            storageTempC: thermal.storageTempC,
+            history: thermalHistory.snapshot()))
 
         let statusDetail: String?
         if connected {

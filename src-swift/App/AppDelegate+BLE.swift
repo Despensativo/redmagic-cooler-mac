@@ -48,7 +48,7 @@ extension AppDelegate: CoolerBLEManagerDelegate {
     }
 
     private func onConnected() {
-        thermal = ThermalMonitor.read()
+        sampleThermal()
         if turnOffOnConnect {
             turnOffOnConnect = false
             autopilot.resetStandby(isStandby: true)
