@@ -442,6 +442,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func macDidWake() {
         EventLogger.record("system did wake — restoring active cooling mode (\(appMode.rawValue))")
+        ThermalMonitor.invalidateCache()
         thermal = ThermalMonitor.read()
         syncHardwareToActiveMode(force: true)
         refresh()

@@ -123,6 +123,19 @@
   1. Ajustado `RedMagicDriver.swift` para enviar bytes em ordem BGR `[effect, color.b, color.g, color.r]` no modelo 5 Pro. Azul `RGB(0, 100, 255)` passa a enviar `[04, FF, 64, 00]`, ativando o canal azul a 100% no hardware.
   2. Telemetria mockada removida definitivamente da interface e dos screenshots oficiais no commit `ea5f4fa4`.
 
+## [AL-COOLER-011] Telemetria Dual CPU + GPU (PMU2 tdie), Caching Persistente de Serviços IOHID e Eliminação de Ponto Cego de IA/Metal
+* **Erro:**
+  1. Em cargas de Inteligência Artificial (LLMs locais como Ollama/MLX), renderização Metal e 3D, a CPU do Apple Silicon ficava em ~45°C–48°C enquanto a GPU (`PMU2 tdie`) atingia 75°C–85°C, mas o Autopilot mantinha o cooler desligado em Standby por ler exclusivamente os sensores de CPU (`PMU tdie`).
+  2. A cada 1 segundo (1 Hz), `ThermalMonitor` recriava o cliente `IOHIDEventSystemClientCreate` e solicitava a lista de serviços do zero, gerando descarte e reconexão XPC 86.400 vezes por dia.
+* **Causa-Raiz:**
+  1. O código legado filtrava apenas `name.hasPrefix("PMU tdie")`, descartando `PMU2 tdie` (GPU), `PMU tdev` (SoC), bateria e SSD.
+  2. Ausência de cache persistente dos ponteiros de serviços do subsistema HID.
+* **Solução Permanente:**
+  1. Implementada classificação completa de sensores em `ThermalMonitor.swift`: `cpuServices` (`PMU tdie*`), `gpuServices` (`PMU2 tdie*`), `socServices` (`PMU*`), bateria (`gas gauge`) e armazenamento (`nand`/`ssd`).
+  2. Temperatura motriz do Autopilot definida como `max(cpuTempC, gpuTempC)`: se a GPU esquentar sob carga gráfica/IA, o cooler sobe imediatamente para os patamares adequados (Tier 2/3/4) sem depender de carga na CPU.
+  3. Caching persistente do cliente e dos serviços IOHID com método `invalidateCache()` disparado no despertar (`macDidWake()`).
+  4. Interface `StatusCardView` enriquecida: exibe a temperatura de pico motriz em destaque e detalha `CPU XX° · GPU YY°` (com label `GPU Peak` se a GPU for o componente mais quente) e tooltip nativo detalhando todos os subsistemas ao passar o mouse.
+
 
 
 

@@ -244,7 +244,12 @@ extension AppDelegate {
 
         statusCard.update(StatusCardView.ViewModel(
             dieTempC: thermal.dieTemperatureC,
-            thermalState: thermal.thermalState))
+            thermalState: thermal.thermalState,
+            cpuTempC: thermal.cpuTempC,
+            gpuTempC: thermal.gpuTempC,
+            socTempC: thermal.socTempC,
+            batteryTempC: thermal.batteryTempC,
+            storageTempC: thermal.storageTempC))
 
         let statusDetail: String?
         if connected {

@@ -310,6 +310,18 @@ func runTests() {
     assert(AppVersion("v3.1")! == AppVersion("3.1.0")!)
     print("  ✅ ManualTimer & AppVersion: Expiry and semantic version comparison verified")
 
+    // G. ThermalMonitor Dual CPU + GPU Silicon Telemetry & Cache
+    let tReading = ThermalMonitor.read()
+    if let die = tReading.dieTemperatureC {
+        assert((1...130).contains(die), "Die temperature must be within plausible range 1..130°C, got \(die)")
+        if let cpu = tReading.cpuTempC, let gpu = tReading.gpuTempC {
+            assert(abs(die - max(cpu, gpu)) < 0.001, "dieTemperatureC must equal max(cpu, gpu)")
+        }
+        print("  ✅ ThermalMonitor Dual Telemetry: Die \(String(format: "%.1f°C", die)) (CPU: \(tReading.cpuTempC.map { String(format: "%.1f°C", $0) } ?? "nil"), GPU: \(tReading.gpuTempC.map { String(format: "%.1f°C", $0) } ?? "nil"))")
+    } else {
+        print("  ℹ️ ThermalMonitor: Non-Apple-Silicon or headless environment (state: \(tReading.thermalState))")
+    }
+
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
 

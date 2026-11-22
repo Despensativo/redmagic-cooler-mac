@@ -12,6 +12,11 @@ final class StatusCardView: PanelRowView {
     struct ViewModel {
         var dieTempC: Double?
         var thermalState: ThermalState = .nominal
+        var cpuTempC: Double? = nil
+        var gpuTempC: Double? = nil
+        var socTempC: Double? = nil
+        var batteryTempC: Double? = nil
+        var storageTempC: Double? = nil
     }
 
     private var model = ViewModel()
@@ -39,6 +44,13 @@ final class StatusCardView: PanelRowView {
 
     func update(_ model: ViewModel) {
         self.model = model
+        var tipParts: [String] = []
+        if let cpu = model.cpuTempC { tipParts.append("CPU: \(String(format: "%.1f°C", cpu))") }
+        if let gpu = model.gpuTempC { tipParts.append("GPU: \(String(format: "%.1f°C", gpu))") }
+        if let soc = model.socTempC { tipParts.append("SoC: \(String(format: "%.1f°C", soc))") }
+        if let bat = model.batteryTempC { tipParts.append("Bateria: \(String(format: "%.1f°C", bat))") }
+        if let ssd = model.storageTempC { tipParts.append("SSD: \(String(format: "%.1f°C", ssd))") }
+        self.toolTip = tipParts.isEmpty ? nil : tipParts.joined(separator: "  ·  ")
         needsDisplay = true
     }
 
@@ -71,9 +83,24 @@ final class StatusCardView: PanelRowView {
         tempText.draw(at: NSPoint(x: pad, y: tempY))
 
         let tempWidth = tempText.size().width
-        let labelY = tempY + 10
-        let tempLabel = UIStyle.text("Die / CPU", Self.subFont, .tertiaryLabelColor)
-        tempLabel.draw(at: NSPoint(x: pad + tempWidth + 8, y: labelY))
+        let labelX = pad + tempWidth + 8
+
+        if let cpu = model.cpuTempC, let gpu = model.gpuTempC {
+            // Dual Silicon Telemetry (Apple Silicon Package):
+            let isGpuHotter = gpu > cpu + 1.0
+            let headerText = isGpuHotter ? "GPU Peak" : "SoC / Die"
+            let headerColor: NSColor = isGpuHotter ? .systemOrange : .tertiaryLabelColor
+            UIStyle.text(headerText, Self.subFont, headerColor).draw(at: NSPoint(x: labelX, y: tempY + 1))
+
+            let cpuInt = Int(round(cpu))
+            let gpuInt = Int(round(gpu))
+            let breakdown = "CPU \(cpuInt)° · GPU \(gpuInt)°"
+            UIStyle.text(breakdown, Self.subFont, .secondaryLabelColor).draw(at: NSPoint(x: labelX, y: tempY + 15))
+        } else {
+            let labelY = tempY + 10
+            let tempLabel = UIStyle.text("Die / CPU", Self.subFont, .tertiaryLabelColor)
+            tempLabel.draw(at: NSPoint(x: labelX, y: labelY))
+        }
 
         // Right side: Mac Model (top) and Thermal State dot (bottom)
         let modelText = UIStyle.text(SystemInfo.macModel, Self.modelFont, .secondaryLabelColor)
