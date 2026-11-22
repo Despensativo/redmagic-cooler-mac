@@ -353,6 +353,15 @@ func runTests() {
     assert(snapReset.sampleCount == 1 && snapReset.cpu?.current == 46.0)
     print("  ✅ ThermalHistory (10m Rolling): Min/Avg/Max, sub-second coalescing, 600s pruning & clock-jump resilience verified")
 
+    // I. SystemInfo Exact Chip & Friendly Model Formatting
+    assert(SystemInfo.formatFriendlyModel("MacBook Air (13-inch, M5)") == "MacBook Air 13\"")
+    assert(SystemInfo.formatFriendlyModel("MacBook Pro (16-inch, Nov 2024)") == "MacBook Pro 16\"")
+    assert(SystemInfo.formatFriendlyModel("Mac Studio (2025)") == "Mac Studio")
+    assert(SystemInfo.formatFriendlyModel("iMac (24-inch, M4, 2024)") == "iMac 24\"")
+    assert(SystemInfo.formatChipName("Apple M5") == "Apple M5")
+    assert(SystemInfo.formatChipName("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz") == "Intel Core i7")
+    print("  ✅ SystemInfo Hardware Detection: Model '\(SystemInfo.macModel)' · Chip '\(SystemInfo.chipName ?? "unknown")'")
+
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
 

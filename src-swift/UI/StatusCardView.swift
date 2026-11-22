@@ -151,11 +151,17 @@ final class StatusCardView: PanelRowView {
             return gpu > cpu + 1.0
         }()
 
+        let chipLabel: String
+        if isGpuHotter {
+            chipLabel = SystemInfo.shortChipName.map { "\($0) · GPU" } ?? "GPU"
+        } else {
+            chipLabel = SystemInfo.chipName ?? "CPU"
+        }
+
         if let dieStats = model.history?.die {
-            let roleText = isGpuHotter ? "GPU Peak" : (model.gpuTempC != nil ? "SoC Peak" : "Die / CPU")
-            let roleColor: NSColor = isGpuHotter ? .systemOrange : .tertiaryLabelColor
+            let roleColor: NSColor = isGpuHotter ? .systemOrange : .secondaryLabelColor
             let roleFont = isGpuHotter ? Self.stateFont : Self.subMediumFont
-            UIStyle.text(roleText, roleFont, roleColor)
+            UIStyle.text(chipLabel, roleFont, roleColor)
                 .draw(at: NSPoint(x: labelX, y: tempY + 3))
 
             let avgStr = SystemInfo.formatTemp(dieStats.avg, degreeOnly: true)
@@ -163,8 +169,7 @@ final class StatusCardView: PanelRowView {
             UIStyle.text("Méd \(avgStr) · \(winMin)m", Self.subMonoFont, .tertiaryLabelColor)
                 .draw(at: NSPoint(x: labelX, y: tempY + 16))
         } else {
-            let roleText = isGpuHotter ? "GPU Peak" : (model.gpuTempC != nil ? "SoC / Die" : "Die / CPU")
-            UIStyle.text(roleText, Self.subFont, .tertiaryLabelColor)
+            UIStyle.text(chipLabel, Self.subMediumFont, .secondaryLabelColor)
                 .draw(at: NSPoint(x: labelX, y: tempY + 10))
         }
 
