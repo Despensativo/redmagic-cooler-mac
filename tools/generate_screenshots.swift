@@ -212,7 +212,22 @@ final class HeroBannerView: NSView {
 
         // Primary foreground card: Step-Ladder Autopilot v3.1
         let status1 = StatusCardView(width: cardW)
-        status1.update(StatusCardView.ViewModel(dieTempC: 52.0, thermalState: .nominal))
+        status1.update(StatusCardView.ViewModel(
+            dieTempC: 52.0,
+            thermalState: .nominal,
+            cpuTempC: 52.0,
+            gpuTempC: 46.0,
+            batteryTempC: 31.0,
+            storageTempC: 41.0,
+            history: ThermalHistorySnapshot(
+                windowMinutes: 10, sampleCount: 600,
+                die: ThermalStats(current: 52.0, min: 45.0, avg: 49.0, max: 58.0),
+                cpu: ThermalStats(current: 52.0, min: 45.0, avg: 49.0, max: 58.0),
+                gpu: ThermalStats(current: 46.0, min: 42.0, avg: 44.0, max: 49.0),
+                battery: ThermalStats(current: 31.0, min: 30.0, avg: 31.0, max: 32.0),
+                storage: ThermalStats(current: 41.0, min: 39.0, avg: 40.0, max: 43.0)
+            )
+        ))
         status1.menuEdges = [.top]
 
         let cooler1 = CoolerPanelView(width: cardW)
@@ -267,7 +282,7 @@ final class HeroBannerView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 1280, height: 640))
 
         rightCard.frame.origin = CGPoint(x: 914, y: 112)
-        leftCard.frame.origin = CGPoint(x: 564, y: 44)
+        leftCard.frame.origin = CGPoint(x: 564, y: max(20, (640 - leftCard.frame.height) / 2))
 
         addSubview(rightCard)
         addSubview(leftCard)
@@ -478,7 +493,22 @@ func renderImage(view: NSView, to path: String, asJPEG: Bool = false) {
 
 func buildAutoScreenshot(width: CGFloat) -> NSView {
     let statusCard = StatusCardView(width: width)
-    statusCard.update(StatusCardView.ViewModel(dieTempC: 52.0, thermalState: .nominal))
+    statusCard.update(StatusCardView.ViewModel(
+        dieTempC: 52.0,
+        thermalState: .nominal,
+        cpuTempC: 52.0,
+        gpuTempC: 46.0,
+        batteryTempC: 31.0,
+        storageTempC: 41.0,
+        history: ThermalHistorySnapshot(
+            windowMinutes: 10, sampleCount: 600,
+            die: ThermalStats(current: 52.0, min: 45.0, avg: 49.0, max: 58.0),
+            cpu: ThermalStats(current: 52.0, min: 45.0, avg: 49.0, max: 58.0),
+            gpu: ThermalStats(current: 46.0, min: 42.0, avg: 44.0, max: 49.0),
+            battery: ThermalStats(current: 31.0, min: 30.0, avg: 31.0, max: 32.0),
+            storage: ThermalStats(current: 41.0, min: 39.0, avg: 40.0, max: 43.0)
+        )
+    ))
     statusCard.menuEdges = [.top]
 
     let coolerPanel = CoolerPanelView(width: width)
@@ -533,7 +563,22 @@ func buildAutoScreenshot(width: CGFloat) -> NSView {
 
 func buildTurboScreenshot(width: CGFloat) -> NSView {
     let statusCard = StatusCardView(width: width)
-    statusCard.update(StatusCardView.ViewModel(dieTempC: 74.0, thermalState: .fair))
+    statusCard.update(StatusCardView.ViewModel(
+        dieTempC: 74.0,
+        thermalState: .fair,
+        cpuTempC: 68.0,
+        gpuTempC: 74.0,
+        batteryTempC: 35.0,
+        storageTempC: 48.0,
+        history: ThermalHistorySnapshot(
+            windowMinutes: 10, sampleCount: 600,
+            die: ThermalStats(current: 74.0, min: 52.0, avg: 69.0, max: 79.0),
+            cpu: ThermalStats(current: 68.0, min: 50.0, avg: 64.0, max: 72.0),
+            gpu: ThermalStats(current: 74.0, min: 52.0, avg: 69.0, max: 79.0),
+            battery: ThermalStats(current: 35.0, min: 32.0, avg: 34.0, max: 36.0),
+            storage: ThermalStats(current: 48.0, min: 43.0, avg: 46.0, max: 50.0)
+        )
+    ))
     statusCard.menuEdges = [.top]
 
     let coolerPanel = CoolerPanelView(width: width)
@@ -587,7 +632,22 @@ func buildTurboScreenshot(width: CGFloat) -> NSView {
 
 func buildManualScreenshot(width: CGFloat) -> NSView {
     let statusCard = StatusCardView(width: width)
-    statusCard.update(StatusCardView.ViewModel(dieTempC: 48.0, thermalState: .nominal))
+    statusCard.update(StatusCardView.ViewModel(
+        dieTempC: 48.0,
+        thermalState: .nominal,
+        cpuTempC: 48.0,
+        gpuTempC: 43.0,
+        batteryTempC: 30.0,
+        storageTempC: 40.0,
+        history: ThermalHistorySnapshot(
+            windowMinutes: 10, sampleCount: 600,
+            die: ThermalStats(current: 48.0, min: 43.0, avg: 47.0, max: 54.0),
+            cpu: ThermalStats(current: 48.0, min: 43.0, avg: 47.0, max: 54.0),
+            gpu: ThermalStats(current: 43.0, min: 40.0, avg: 42.0, max: 46.0),
+            battery: ThermalStats(current: 30.0, min: 29.0, avg: 30.0, max: 31.0),
+            storage: ThermalStats(current: 40.0, min: 38.0, avg: 39.0, max: 42.0)
+        )
+    ))
     statusCard.menuEdges = [.top]
 
     let coolerPanel = CoolerPanelView(width: width)
@@ -656,7 +716,22 @@ func buildManualScreenshot(width: CGFloat) -> NSView {
 
 func buildDevicePickerScreenshot(width: CGFloat) -> NSView {
     let statusCard = StatusCardView(width: width)
-    statusCard.update(StatusCardView.ViewModel(dieTempC: 42.0, thermalState: .nominal))
+    statusCard.update(StatusCardView.ViewModel(
+        dieTempC: 42.0,
+        thermalState: .nominal,
+        cpuTempC: 42.0,
+        gpuTempC: 38.0,
+        batteryTempC: 29.0,
+        storageTempC: 38.0,
+        history: ThermalHistorySnapshot(
+            windowMinutes: 10, sampleCount: 600,
+            die: ThermalStats(current: 42.0, min: 39.0, avg: 41.0, max: 46.0),
+            cpu: ThermalStats(current: 42.0, min: 39.0, avg: 41.0, max: 46.0),
+            gpu: ThermalStats(current: 38.0, min: 36.0, avg: 37.0, max: 41.0),
+            battery: ThermalStats(current: 29.0, min: 28.0, avg: 29.0, max: 30.0),
+            storage: ThermalStats(current: 38.0, min: 37.0, avg: 38.0, max: 39.0)
+        )
+    ))
     statusCard.menuEdges = [.top]
 
     let devicesHeader = SectionHeaderRow(width: width, title: "Available devices")
