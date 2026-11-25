@@ -244,6 +244,9 @@ extension AppDelegate {
                 let maxInfo = freq.maxGpuMHz > 0 ? " (Máx \(FrequencyMonitor.formatFreq(freq.maxGpuMHz)))" : ""
                 toolTipParts.append("GPU: \(freq.gpuFormatted)\(maxInfo)")
             }
+            if let ane = freq.ane, ane.isSupported {
+                toolTipParts.append("ANE: \(FrequencyMonitor.formatANEStatus(ane))")
+            }
         }
         button.toolTip = toolTipParts.joined(separator: "\n")
     }
@@ -269,7 +272,8 @@ extension AppDelegate {
             cpuMHz: (freq?.cpuMHz ?? 0) > 0 ? freq?.cpuMHz : nil,
             gpuMHz: (freq?.gpuMHz ?? 0) > 0 ? freq?.gpuMHz : nil,
             maxCpuMHz: (freq?.maxCpuMHz ?? 0) > 0 ? freq?.maxCpuMHz : nil,
-            maxGpuMHz: (freq?.maxGpuMHz ?? 0) > 0 ? freq?.maxGpuMHz : nil))
+            maxGpuMHz: (freq?.maxGpuMHz ?? 0) > 0 ? freq?.maxGpuMHz : nil,
+            ane: freq?.ane))
 
         let statusDetail: String?
         if connected {

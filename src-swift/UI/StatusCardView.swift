@@ -23,6 +23,7 @@ final class StatusCardView: PanelRowView {
         var gpuMHz: Int? = nil
         var maxCpuMHz: Int? = nil
         var maxGpuMHz: Int? = nil
+        var ane: FrequencyMonitor.ANEReading? = nil
     }
 
     private enum SensorKind {
@@ -45,6 +46,7 @@ final class StatusCardView: PanelRowView {
     private static let tableHeaderY: CGFloat = 72
     private static let tableFirstRowY: CGFloat = 87
     private static let tableRowPitch: CGFloat = 16
+    private static let aneRowHeight: CGFloat = 15
     private static let tableBottomPad: CGFloat = 7
 
     private static let headerFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
@@ -77,7 +79,8 @@ final class StatusCardView: PanelRowView {
         self.model = model
         self.tableRows = buildRows(from: model)
 
-        let targetHeight = Self.height(forRowCount: tableRows.count)
+        let hasANE = model.ane?.isSupported == true
+        let targetHeight = Self.height(forRowCount: tableRows.count, hasANE: hasANE)
         if abs(frame.size.height - targetHeight) > 0.5 {
             frame.size.height = targetHeight
         }
@@ -102,11 +105,28 @@ final class StatusCardView: PanelRowView {
         if let soc = model.socTempC { tipParts.append("SoC: \(String(format: "%.1f°C", soc))") }
         if let bat = model.batteryTempC { tipParts.append("Bateria: \(String(format: "%.1f°C", bat))") }
         if let ssd = model.storageTempC { tipParts.append("SSD: \(String(format: "%.1f°C", ssd))") }
+        if let ane = model.ane, ane.isSupported {
+            let status = FrequencyMonitor.formatANEStatus(ane)
+            let floorSuffix = ane.isActive && ane.peakFloor > .vmin ? " [\(ane.peakFloor.rawFloorName)]" : ""
+            tipParts.append("ANE: \(status)\(floorSuffix) (Consumo W requer sudo)")
+        }
         self.toolTip = tipParts.isEmpty ? nil : tipParts.joined(separator: "  ·  ")
         needsDisplay = true
     }
 
-    private static func height(forRowCount count: Int) -> CGFloat {
+    private static func aneLayout(forRowCount count: Int) -> (dividerY: CGFloat, rowY: CGFloat) {
+        if count > 0 {
+            let divY = tableFirstRowY + CGFloat(count) * tableRowPitch + 2
+            return (divY, divY + 6)
+        }
+        return (dividerY, tableHeaderY + 2)
+    }
+
+    private static func height(forRowCount count: Int, hasANE: Bool) -> CGFloat {
+        if hasANE {
+            let layout = aneLayout(forRowCount: count)
+            return layout.rowY + aneRowHeight + tableBottomPad
+        }
         guard count > 0 else { return compactHeight }
         return tableFirstRowY + CGFloat(count) * tableRowPitch + tableBottomPad
     }
@@ -225,45 +245,95 @@ final class StatusCardView: PanelRowView {
         stateText.draw(at: NSPoint(x: rightEdge - stateText.size().width, y: tempY + 17))
 
         // 3. Rolling 10-Minute Sensor Table
-        guard !tableRows.isEmpty else { return }
+        if !tableRows.isEmpty {
+            let divRect = NSRect(x: pad, y: Self.dividerY, width: rightEdge - pad, height: 1)
+            NSColor.separatorColor.withAlphaComponent(0.10).setFill()
+            divRect.fill()
 
-        let divRect = NSRect(x: pad, y: Self.dividerY, width: rightEdge - pad, height: 1)
+            // Column right-aligned anchors (42pt pitch keeps generous column whitespace
+            // while giving long frequency labels like GPU MHz/GHz extra breathing room).
+            let colMaxX = rightEdge
+            let colAvgX = rightEdge - 42
+            let colMinX = rightEdge - 84
+            let colCurX = rightEdge - 130
+
+            let winMin = model.history?.windowMinutes ?? 10
+            UIStyle.text("Sensor (\(winMin)m)", Self.colHeaderFont, .tertiaryLabelColor)
+                .draw(at: NSPoint(x: pad, y: Self.tableHeaderY))
+            drawRightAligned("Atual", Self.colHeaderFont, .tertiaryLabelColor, rightX: colCurX, y: Self.tableHeaderY)
+            drawRightAligned("Mín", Self.colHeaderFont, .tertiaryLabelColor, rightX: colMinX, y: Self.tableHeaderY)
+            drawRightAligned("Méd", Self.colHeaderFont, .tertiaryLabelColor, rightX: colAvgX, y: Self.tableHeaderY)
+            drawRightAligned("Máx", Self.colHeaderFont, .tertiaryLabelColor, rightX: colMaxX, y: Self.tableHeaderY)
+
+            for (index, row) in tableRows.enumerated() {
+                let y = Self.tableFirstRowY + CGFloat(index) * Self.tableRowPitch
+
+                UIStyle.text(row.label, Self.rowLabelFont, .secondaryLabelColor)
+                    .draw(at: NSPoint(x: pad, y: y))
+
+                let curStr = SystemInfo.formatTemp(row.stats.current, degreeOnly: true)
+                let minStr = SystemInfo.formatTemp(row.stats.min, degreeOnly: true)
+                let avgStr = SystemInfo.formatTemp(row.stats.avg, degreeOnly: true)
+                let maxStr = SystemInfo.formatTemp(row.stats.max, degreeOnly: true)
+
+                drawRightAligned(curStr, Self.rowCurrentFont, currentColor(for: row.kind, valueC: row.stats.current),
+                                 rightX: colCurX, y: y)
+                drawRightAligned(minStr, Self.rowStatFont, .tertiaryLabelColor,
+                                 rightX: colMinX, y: y)
+                drawRightAligned(avgStr, Self.rowAvgFont, .secondaryLabelColor,
+                                 rightX: colAvgX, y: y)
+                drawRightAligned(maxStr, Self.rowStatFont, maxColor(for: row.kind, valueC: row.stats.max),
+                                 rightX: colMaxX, y: y)
+            }
+        }
+
+        // 4. Apple Neural Engine (ANE) Live Telemetry Strip
+        if let ane = model.ane, ane.isSupported {
+            drawANERow(ane, rowCount: tableRows.count, pad: pad, rightEdge: rightEdge)
+        }
+    }
+
+    private func drawANERow(_ ane: FrequencyMonitor.ANEReading,
+                            rowCount: Int,
+                            pad: CGFloat,
+                            rightEdge: CGFloat) {
+        let layout = Self.aneLayout(forRowCount: rowCount)
+
+        let divRect = NSRect(x: pad, y: layout.dividerY, width: rightEdge - pad, height: 1)
         NSColor.separatorColor.withAlphaComponent(0.10).setFill()
         divRect.fill()
 
-        // Column right-aligned anchors (46pt pitch guarantees generous whitespace)
-        let colMaxX = rightEdge
-        let colAvgX = rightEdge - 46
-        let colMinX = rightEdge - 92
-        let colCurX = rightEdge - 140
+        UIStyle.text("Rede Neural (ANE)", Self.rowLabelFont, .secondaryLabelColor)
+            .draw(at: NSPoint(x: pad, y: layout.rowY))
 
-        let winMin = model.history?.windowMinutes ?? 10
-        UIStyle.text("Sensor (\(winMin)m)", Self.colHeaderFont, .tertiaryLabelColor)
-            .draw(at: NSPoint(x: pad, y: Self.tableHeaderY))
-        drawRightAligned("Atual", Self.colHeaderFont, .tertiaryLabelColor, rightX: colCurX, y: Self.tableHeaderY)
-        drawRightAligned("Mín", Self.colHeaderFont, .tertiaryLabelColor, rightX: colMinX, y: Self.tableHeaderY)
-        drawRightAligned("Méd", Self.colHeaderFont, .tertiaryLabelColor, rightX: colAvgX, y: Self.tableHeaderY)
-        drawRightAligned("Máx", Self.colHeaderFont, .tertiaryLabelColor, rightX: colMaxX, y: Self.tableHeaderY)
+        let statusText = FrequencyMonitor.formatANEStatus(ane)
+        let dotString = ane.isActive ? "● " : "○ "
+        let dotColor = aneIndicatorColor(for: ane)
+        let textFont = ane.isActive ? Self.rowCurrentFont : Self.rowStatFont
+        let textColor: NSColor = ane.isActive
+            ? .labelColor
+            : ((ane.recentPeakBandwidthGBs > 0 || ane.recentMaxActivePercent > 0) ? .secondaryLabelColor : .tertiaryLabelColor)
 
-        for (index, row) in tableRows.enumerated() {
-            let y = Self.tableFirstRowY + CGFloat(index) * Self.tableRowPitch
+        let combined = NSMutableAttributedString(
+            string: dotString,
+            attributes: [.font: Self.stateFont, .foregroundColor: dotColor]
+        )
+        combined.append(NSAttributedString(
+            string: statusText,
+            attributes: [.font: textFont, .foregroundColor: textColor]
+        ))
+        combined.draw(at: NSPoint(x: rightEdge - combined.size().width, y: layout.rowY))
+    }
 
-            UIStyle.text(row.label, Self.rowLabelFont, .secondaryLabelColor)
-                .draw(at: NSPoint(x: pad, y: y))
-
-            let curStr = SystemInfo.formatTemp(row.stats.current, degreeOnly: true)
-            let minStr = SystemInfo.formatTemp(row.stats.min, degreeOnly: true)
-            let avgStr = SystemInfo.formatTemp(row.stats.avg, degreeOnly: true)
-            let maxStr = SystemInfo.formatTemp(row.stats.max, degreeOnly: true)
-
-            drawRightAligned(curStr, Self.rowCurrentFont, currentColor(for: row.kind, valueC: row.stats.current),
-                             rightX: colCurX, y: y)
-            drawRightAligned(minStr, Self.rowStatFont, .tertiaryLabelColor,
-                             rightX: colMinX, y: y)
-            drawRightAligned(avgStr, Self.rowAvgFont, .secondaryLabelColor,
-                             rightX: colAvgX, y: y)
-            drawRightAligned(maxStr, Self.rowStatFont, maxColor(for: row.kind, valueC: row.stats.max),
-                             rightX: colMaxX, y: y)
+    private func aneIndicatorColor(for ane: FrequencyMonitor.ANEReading) -> NSColor {
+        guard ane.isActive else { return .tertiaryLabelColor }
+        switch ane.peakFloor {
+        case .vmin, .vnom:
+            return NSColor(srgbRed: 0.10, green: 0.58, blue: 1.0, alpha: 1.0)
+        case .vmax:
+            return .systemOrange
+        case .vovd, .vovd2:
+            return .systemPurple
         }
     }
 

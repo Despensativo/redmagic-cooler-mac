@@ -362,7 +362,7 @@ func runTests() {
     assert(SystemInfo.formatChipName("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz") == "Intel Core i7")
     print("  ✅ SystemInfo Hardware Detection: Model '\(SystemInfo.macModel)' · Chip '\(SystemInfo.chipName ?? "unknown")'")
 
-    // J. FrequencyMonitor Formatting & Telemetry
+    // J. FrequencyMonitor Formatting & ANE Telemetry
     assert(FrequencyMonitor.formatFreq(0) == "")
     assert(FrequencyMonitor.formatFreq(740) == "740 MHz")
     assert(FrequencyMonitor.formatFreq(1000) == "1.0 GHz")
@@ -371,7 +371,43 @@ func runTests() {
     assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 2600, maxMHz: 4500) == "2.6 / 4.5 GHz")
     assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 740, maxMHz: 1600) == "740 MHz / 1.6 GHz")
     assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 0, maxMHz: 4500) == "Máx 4.5 GHz")
-    print("  ✅ FrequencyMonitor: Real-time clock formatters (MHz/GHz & Current/Max) verified")
+
+    assert(FrequencyMonitor.parseBandwidthGBs("  64GB/s") == 64)
+    assert(FrequencyMonitor.parseBandwidthGBs("2 GB/s") == 2)
+    assert(FrequencyMonitor.parseBandwidthGBs("VMIN") == nil)
+
+    // ANE Idle: VMIN 100%, baseline index-0 keepalive ignored
+    let aneIdle = FrequencyMonitor.summarizeANE(
+        floorStates: [("VMIN", 24_000_000), ("VNOM", 0), ("VMAX", 0), ("VOVD", 0)],
+        niStates: [("2GB/s", 17), ("4GB/s", 0)],
+        afStates: [("1GB/s", 4000), ("2GB/s", 0)]
+    )
+    assert(aneIdle.isSupported && !aneIdle.isActive && aneIdle.activePercent == 0 && aneIdle.peakBandwidthGBs == 0)
+    assert(FrequencyMonitor.formatANEStatus(aneIdle) == "Ocioso")
+
+    // ANE Idle with recent 10m peak
+    var aneRecent = aneIdle
+    aneRecent.recentMaxActivePercent = 44.0
+    aneRecent.recentPeakBandwidthGBs = 62
+    assert(FrequencyMonitor.formatANEStatus(aneRecent) == "Ocioso · Pico 62 GB/s")
+
+    // ANE Active burst: VNOM+VMAX+VOVD active + 62 GB/s uplink + 32 GB/s fabric
+    let aneBurst = FrequencyMonitor.summarizeANE(
+        floorStates: [("VMIN", 7_100_000), ("VNOM", 1_600_000), ("VMAX", 800_000), ("VOVD", 500_000)],
+        niStates: [("2GB/s", 177), ("32GB/s", 18), ("62GB/s", 1), ("64GB/s", 0)],
+        afStates: [("1GB/s", 946), ("32GB/s", 78)]
+    )
+    assert(aneBurst.isSupported && aneBurst.isActive)
+    assert(abs(aneBurst.activePercent - 29.0) < 0.1, "Expected 29.0% ANE duty residency, got \(aneBurst.activePercent)")
+    assert(aneBurst.peakFloor == .vovd)
+    assert(aneBurst.peakBandwidthGBs == 62)
+    assert(FrequencyMonitor.formatANEStatus(aneBurst) == "Ativo · 29% · Máx · 62 GB/s")
+
+    // ANE Fallback (older hardware without PMP counters)
+    let aneFallback = FrequencyMonitor.summarizeANE(floorStates: [], niStates: [], afStates: [], hasDriverFallbackActive: true)
+    assert(aneFallback.isActive && FrequencyMonitor.formatANEStatus(aneFallback) == "Ativo")
+
+    print("  ✅ FrequencyMonitor: Clocks (MHz/GHz) & ANE telemetry summarization verified")
 
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
