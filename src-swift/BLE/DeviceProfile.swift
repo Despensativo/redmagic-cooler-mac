@@ -57,7 +57,8 @@ struct DeviceProfile: Equatable {
         .magcooler5Pro,
         .magcooler4Pro,
 
-        // Black Shark (27W - 35W)
+        // Black Shark (27W - 40W)
+        .blackSharkMagCooler6Max,
         .blackSharkMagCooler5Pro,
         .blackSharkMagCooler4Pro,
 
@@ -111,8 +112,12 @@ struct DeviceProfile: Equatable {
             }
         }
 
-        // 3. Brand disambiguation by name
-        if lower.contains("black shark") || lower.contains("blackshark") || lower.contains("bs ") || lower.hasPrefix("bs") || lower.contains("br42") {
+        // 3. Brand disambiguation by name (must run before REDMAGIC's generic "magcooler 6" / "cooler 6")
+        if lower.contains("black shark") || lower.contains("blackshark")
+            || lower.contains("bs ") || lower.hasPrefix("bs")
+            || lower.contains("fun cooler") || lower.contains("funcooler")
+            || lower.contains("6max") || lower.contains("6 max")
+            || lower.contains("br42") || lower.contains("br64") {
             return matchBlackShark(lower)
         }
 
@@ -162,9 +167,13 @@ struct DeviceProfile: Equatable {
         }
     }
 
-    /// Disambiguates Black Shark 4 Pro vs 5 Pro.
-    /// 5 Pro models use "BR42-Cooler" or "5", which must not be grabbed by "4" from the 42 suffix.
+    /// Disambiguates Black Shark 4 Pro vs 5 Pro vs 6 Max.
+    /// 5 Pro models use "BR42-Cooler" or "5", which must not be grabbed by "4" from the 42 suffix;
+    /// 6 Max models use "Black Shark MagCooler 6Max", "Fun Cooler 6Max", or "BR64".
     private static func matchBlackShark(_ lower: String) -> DeviceProfile {
+        if lower.contains("6") || lower.contains("br64") {
+            return .blackSharkMagCooler6Max
+        }
         if lower.contains("5") || lower.contains("br42") {
             return .blackSharkMagCooler5Pro
         }
@@ -180,7 +189,7 @@ struct DeviceProfile: Equatable {
     /// rather than thinking the app is broken.
     static let vendorHints = [
         "redmagic", "red magic", "magcooler", "magic cooler", "rm cooler", "vc cooler", "nubia",
-        "black shark", "blackshark", "funcooler", "magcooler 4", "magcooler 5",
+        "black shark", "blackshark", "funcooler", "fun cooler", "magcooler 4", "magcooler 5", "magcooler 6max", "br64",
         "flydigi", "feizhi", "b6x", "b7x", "b8x",
         "iqoo", "ira2", "vivo cooler",
         "oneplus", "oppo cooler", "supervooc",
@@ -265,6 +274,23 @@ extension DeviceProfile {
     )
 
     // ── Black Shark Lineup ───────────────────────────────────────────────────
+
+    /// Black Shark MagCooler 6 Max (advertises as `Black Shark MagCooler 6Max` / `Fun Cooler 6Max` / `BR64`) — 40W TEC
+    static let blackSharkMagCooler6Max = DeviceProfile(
+        id: "bs-magcooler-6max",
+        brand: "Black Shark",
+        modelName: "Black Shark MagCooler 6 Max (40W)",
+        ratedWatts: 40,
+        hasPhysicalPowerSwitch: false,
+        hasTelemetryStream: true,
+        nameHints: [
+            "black shark magcooler 6max", "black shark 6", "blackshark 6",
+            "magcooler 6max", "fun cooler 6max", "funcooler 6max",
+            "bs 6max", "br64"
+        ],
+        serviceUUID: CBUUID(string: "0000A0A0-3C17-D293-8E48-14FE2E4DA212"),
+        driverFactory: { BlackSharkDriver(profile: $0) }
+    )
 
     /// Black Shark MagCooler 5 Pro (advertises as `Black Shark MagCooler 5 Pro` / `BS 5Pro`) — 35W TEC
     static let blackSharkMagCooler5Pro = DeviceProfile(

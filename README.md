@@ -108,6 +108,7 @@ Strict driver isolation ensures every supported brand connects through dedicated
 | **REDMAGIC** | **VC Cooler 6 Pro** | **36W** | Liquid Vapor Chamber + Peltier TEC | ✅ Supported & Verified |
 | **REDMAGIC** | **Cryo Cooler 8 Pro** | **36W** | 4th-Gen Custom Cryo TEC | ✅ Supported |
 | **REDMAGIC** | **Magcooler 4 Pro** | **27W** | High-Power Magnetic TEC | ✅ Supported |
+| **Black Shark** | **MagCooler 6 Max** | **40W** | Dual-Mode (`Overclock` / `Custom 1–5`), Watts & USB-PD Telemetry (`BR64`) | ✅ Protocol Ready (Pending Hardware Test) |
 | **Black Shark** | **MagCooler 5 Pro** | **35W** | 5-Step Custom TEC (5100 RPM) | ✅ Supported |
 | **Black Shark** | **MagCooler 4 Pro** | **27W** | Dual-Channel Power + Fan | ✅ Supported |
 | **Flydigi** | **Flydigi B8X** | **30W** | Overclock Frequency Converter TEC | ✅ Supported |

@@ -136,6 +136,16 @@
   3. Caching persistente do cliente e dos serviços IOHID com método `invalidateCache()` disparado no despertar (`macDidWake()`).
   4. Interface `StatusCardView` enriquecida: exibe a temperatura de pico motriz em destaque e detalha `CPU XX° · GPU YY°` (com label `GPU Peak` se a GPU for o componente mais quente) e tooltip nativo detalhando todos os subsistemas ao passar o mouse.
 
+## [AL-COOLER-012] Protocolo A0A0 v2 do Black Shark MagCooler 6 Max (BR64): Overclock, Limite USB-PD e LEDs
+* **Contexto / Problema:** Suporte inicial do `BlackSharkDriver` cobria apenas Custom Gears (`0x04 0x01..0x05`) e iluminação sólida (`0x09`), sem leitura de potência real (`W`) nem limite por carregador USB-PD, e arriscava interpretar pacotes ACK de escrita (`bytes[2] == 0x00`) como mudança de modo.
+* **Descobertas Extraídas do Binário Shark Arsenal (`App.framework`):**
+  1. **UUIDs GATT**: Serviço `0000A0A0-3C17-D293-8E48-14FE2E4DA212` com características SIG `0000A001/A002-0000-1000-8000-00805F9B34FB`.
+  2. **Telemetria `0x06 0x20`**: além de `coldC` (`bytes[4]`), `hotC` (`bytes[5]`) e `fanRPM` (`bytes[6..7]` LE), reporta `watts` em `bytes[8]` e `inputVoltsTier` em `bytes[9]`.
+  3. **Modos & Limite USB-PD**: Overclock (`0x06 0x05 0x00 0x00 0x01 0x00`) exige `inputVoltsTier >= 12` (`>= 30W`). Abaixo disso, é bloqueado; Custom Gears (`0x04 0x01..0x05`) limitam em `1` (`< 9`), `3` (`9..11`), `4` (`12..14`) e `5` (`>= 15`).
+  4. **Consultas vs ACKs**: Respostas de escrita usam `bytes[2] == 0x00` (apenas ACK); somente quadros `bytes[2] == 0x08` refletem estado real de modo de trabalho (`0x05 0x08`) ou mesa (`0x07 0x08`).
+  5. **Efeitos LED (`0x10 0x01 0x10`)**: `0x07` (`1300`) = Rainbow; `0x0A` (`7000`) com `colorCount = 0x09` = Colorful Breath; `0x0A` com `colorCount = 0x01` = Monochrome Breath; `0x09` (`255`) = Solid; `[0x05, 0x01, 0x00, 0x00, 0x03]` = Off.
+* **Solução Permanente:** Implementados `BR64WorkMode`, throttling dinâmico por USB-PD com reaplicação automática quando a fonte negocia potência superior, diferenciação estrita `0x08` vs `0x00`, exibição de `Frio / Hot / RPM / W` e alerta `< 30W` em `CoolerPanelView` + `TurboStatusView`.
+
 
 
 

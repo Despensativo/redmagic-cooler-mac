@@ -108,6 +108,7 @@ Arquitetura com isolamento de driver: cada fabricante opera em classes dedicadas
 | **REDMAGIC** | **VC Cooler 6 Pro** | **36W** | Câmara de Vapor + Pastilha TEC | ✅ Suportado e Validado |
 | **REDMAGIC** | **Cryo Cooler 8 Pro** | **36W** | Pastilha Criogênica Customizada 4ª Geração | ✅ Suportado |
 | **REDMAGIC** | **Magcooler 4 Pro** | **27W** | Pastilha Magnética Alta Potência | ✅ Suportado |
+| **Black Shark** | **MagCooler 6 Max** | **40W** | Modos Overclock / Custom 1–5, Telemetria de Watts e USB-PD (`BR64`) | ✅ Protocolo Extraído (Aguardando Hardware) |
 | **Black Shark** | **MagCooler 5 Pro** | **35W** | TEC Customizada de 5 Estágios (5.100 RPM) | ✅ Suportado |
 | **Black Shark** | **MagCooler 4 Pro** | **27W** | Canal Duplo de Potência + Ventilador | ✅ Suportado |
 | **Flydigi** | **Flydigi B8X** | **30W** | TEC com Modo Overclock por Conversor | ✅ Suportado |

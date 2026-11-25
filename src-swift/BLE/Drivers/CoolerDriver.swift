@@ -2,7 +2,7 @@ import Foundation
 import CoreBluetooth
 
 /// Events signaled back by a cooler driver to the BLE manager.
-enum DriverUpdate {
+enum DriverUpdate: Equatable {
     case none
     case mode(CoolingMode)
     case fan(UInt8)

@@ -25,6 +25,7 @@ O aplicativo implementa o princípio de **Zero Contaminação de Pacotes**:
 | **REDMAGIC** | VC Cooler 6 Pro | **36W** | `RedMagicDriver` | Controle fino de fan e níveis de potência |
 | **REDMAGIC** | Magnetic Cooler 5 Pro | **36W** | `RedMagicDriver` | Modos Custom/Max e proteção térmica Hall |
 | **MEMO** | CX08 Magnetic Cooler | **36W** | `MemoDriver` | TEC 36W de alta potência com controle PWM |
+| **Black Shark** | MagCooler 6 Max | **40W** | `BlackSharkDriver` | Overclock 40W / Custom 1–5, Telemetria °C/RPM/W, aviso USB-PD `< 30W`, LEDs (`BR64`) |
 | **Black Shark** | MagCooler 5 Pro | **35W** | `BlackSharkDriver` | 5 níveis de intensidade (até 5100 RPM), Desk Mode |
 | **MEMO** | CX07 Magnetic Cooler | **30W** | `MemoDriver` | Refrigeração magnética 30W com RGB |
 | **Flydigi** | Flydigi B8X | **30W** | `FlydigiDriver` | Nível 5 Overclock (30W), leitura decimal de temperatura |

@@ -13,4 +13,26 @@ struct CoolerTelemetry: Equatable {
 
     /// Fan speed in RPM (absent on some older models/firmware).
     let fanRPM: Int?
+
+    /// Live power draw in whole Watts (reported by devices such as Black Shark 6 Max).
+    let watts: Int?
+
+    /// USB-PD input voltage/power tier reported by Black Shark 6 Max (`< 12` indicates < 30W supply).
+    let inputVoltsTier: Int?
+
+    init(
+        coldC: Int,
+        hotC: Int,
+        ambientC: Int,
+        fanRPM: Int?,
+        watts: Int? = nil,
+        inputVoltsTier: Int? = nil
+    ) {
+        self.coldC = coldC
+        self.hotC = hotC
+        self.ambientC = ambientC
+        self.fanRPM = fanRPM
+        self.watts = watts
+        self.inputVoltsTier = inputVoltsTier
+    }
 }

@@ -235,6 +235,9 @@ extension AppDelegate {
             ? "\(ble.profile?.modelName ?? "Cooler"): Conectado (\(ble.fanPercent)% fan)"
             : "Cooler: Desconectado"
         var toolTipParts = ["Smart Cooler Control", status, "SoC: \(SystemInfo.formatTemp(thermal.dieTemperatureC))"]
+        if ble.isConnected, let coolerStats = CoolerPanelView.formatTelemetry(telemetry) {
+            toolTipParts.append("Cooler: \(coolerStats)")
+        }
         if let freq = frequencyMonitor?.current {
             if freq.cpuMHz > 0 {
                 let maxInfo = freq.maxCpuMHz > 0 ? " (Máx \(FrequencyMonitor.formatFreq(freq.maxCpuMHz)))" : ""
@@ -294,6 +297,8 @@ extension AppDelegate {
             statusDetail = nil
         }
 
+        turboStatus.configure(ratedWatts: ble.profile?.ratedWatts, telemetry: telemetry)
+
         coolerPanel.update(CoolerPanelView.ViewModel(
             isConnected: connected,
             phase: ble.phase,
@@ -324,6 +329,9 @@ extension AppDelegate {
                                       rearmC: Config.Safety.condensationRearmC)
         }
         if switchMonitor.looksPoweredOff { return .powerSwitchOff }
+        if let vinTier = telemetry?.inputVoltsTier, vinTier < 12 {
+            return .insufficientPower
+        }
         if appMode == .turbo {
             return .turboMax
         }

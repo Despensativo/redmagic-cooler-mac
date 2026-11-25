@@ -9,6 +9,7 @@ final class CoolerPanelView: PanelRowView {
         case switching
         case manualStaysOn
         case powerSwitchOff
+        case insufficientPower
         case autoWaiting(shutoffC: Int)
         case manualTimedOut
         case safetyIntercepted(cutoffC: Double, rearmC: Double)
@@ -19,6 +20,7 @@ final class CoolerPanelView: PanelRowView {
             case .switching:             return "Comutando modo… aguarde"
             case .manualStaysOn:         return "Modo Manual contínuo"
             case .powerSwitchOff:        return "Chave de energia desligada ou ocioso"
+            case .insufficientPower:     return "Fonte < 30W — use carregador USB-PD mais forte"
             case .autoWaiting(let shut): return "Standby: Mac abaixo de \(shut)°C"
             case .manualTimedOut:        return "Auto-off encerrou o resfriamento manual"
             case .safetyIntercepted(let cutoff, let rearm):
@@ -34,6 +36,7 @@ final class CoolerPanelView: PanelRowView {
             case .manualStaysOn,
                  .manualTimedOut:    return "exclamationmark.triangle"
             case .powerSwitchOff:    return "power.circle.fill"
+            case .insufficientPower: return "bolt.trianglebadge.exclamationmark"
             case .autoWaiting:       return "thermometer.medium"
             case .safetyIntercepted: return "shield.fill"
             case .turboMax:          return "bolt.fill"
@@ -43,7 +46,8 @@ final class CoolerPanelView: PanelRowView {
         var tint: NSColor {
             switch self {
             case .switching:         return .systemBlue
-            case .powerSwitchOff:    return .systemOrange
+            case .powerSwitchOff,
+                 .insufficientPower: return .systemOrange
             case .manualStaysOn,
                  .manualTimedOut:    return .labelColor
             case .autoWaiting:       return .secondaryLabelColor
@@ -51,6 +55,18 @@ final class CoolerPanelView: PanelRowView {
             case .turboMax:          return .systemRed
             }
         }
+    }
+
+    static func formatTelemetry(_ telemetry: CoolerTelemetry?) -> String? {
+        guard let telemetry else { return nil }
+        var parts = ["Frio \(telemetry.coldC)°C / Hot \(telemetry.hotC)°C"]
+        if let rpm = telemetry.fanRPM, rpm > 0 {
+            parts.append("\(rpm) RPM")
+        }
+        if let watts = telemetry.watts {
+            parts.append("\(watts)W")
+        }
+        return parts.joined(separator: " · ")
     }
 
     struct ViewModel {
@@ -211,13 +227,18 @@ final class CoolerPanelView: PanelRowView {
                           zone: runningZone)
         }
 
-        // 2. Connection Line (y = 26)
+        // 2. Live Telemetry or Connection Line (y = 26)
         let connY: CGFloat = 26
-        let connText = model.isConnected ? "Connected over Bluetooth" : model.phase.statusText
-        let connColor = model.isConnected ? NSColor.secondaryLabelColor : phaseColor()
         let maxConnWidth = model.isConnected ? (bounds.width - pad * 2 - Self.fanSize - 12) : (connectButton.frame.minX - pad - 8)
-        let connAttr = UIStyle.text(connText, Self.statusFont, connColor)
-        connAttr.draw(in: NSRect(x: pad, y: connY, width: max(maxConnWidth, 1), height: 15))
+        if model.isConnected, let telemetryText = Self.formatTelemetry(model.telemetry) {
+            UIStyle.text(telemetryText, Self.telemetryFont, .secondaryLabelColor)
+                .draw(in: NSRect(x: pad, y: connY, width: max(maxConnWidth, 1), height: 15))
+        } else {
+            let connText = model.isConnected ? "Connected over Bluetooth" : model.phase.statusText
+            let connColor = model.isConnected ? NSColor.secondaryLabelColor : phaseColor()
+            let connAttr = UIStyle.text(connText, Self.statusFont, connColor)
+            connAttr.draw(in: NSRect(x: pad, y: connY, width: max(maxConnWidth, 1), height: 15))
+        }
 
         // 3. Operational State or Note Line (y = 44)
         let bottomY: CGFloat = 44
@@ -264,7 +285,8 @@ final class CoolerPanelView: PanelRowView {
             if raw.contains("4") { return "REDMAGIC 4 Pro (27W)" }
             return "REDMAGIC Cooler"
         }
-        if raw.contains("Black Shark") || raw.contains("BS ") {
+        if raw.contains("Black Shark") || raw.contains("BS ") || raw.contains("Fun Cooler") || raw.contains("FunCooler") {
+            if raw.contains("6") { return "Black Shark 6 Max (40W)" }
             if raw.contains("5") { return "Black Shark 5 Pro (35W)" }
             if raw.contains("4") { return "Black Shark 4 Pro (27W)" }
             return "Black Shark MagCooler"

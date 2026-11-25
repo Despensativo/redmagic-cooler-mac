@@ -8,6 +8,7 @@ final class TurboStatusView: PanelRowView {
 
     static let height: CGFloat = 60
     private static let pad = UIStyle.panelContentX
+    private var subtitleText = "Potência e ventoinha no máximo · Resfriamento ininterrupto"
 
     init(width: CGFloat) {
         super.init(frame: NSRect(x: 0, y: 0, width: width, height: Self.height))
@@ -17,6 +18,26 @@ final class TurboStatusView: PanelRowView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     override var isFlipped: Bool { true }
+
+    func configure(ratedWatts: Int?, telemetry: CoolerTelemetry?) {
+        var parts: [String] = []
+        if let rpm = telemetry?.fanRPM, rpm > 0 {
+            parts.append("\(rpm) RPM")
+        } else if let ratedWatts {
+            parts.append("Pico \(ratedWatts)W")
+        } else {
+            parts.append("Potência máxima")
+        }
+        if let watts = telemetry?.watts, watts > 0 {
+            parts.append("\(watts)W ativos")
+        }
+        parts.append("Resfriamento ininterrupto")
+        let next = parts.joined(separator: " · ")
+        if next != subtitleText {
+            subtitleText = next
+            needsDisplay = true
+        }
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
@@ -40,7 +61,7 @@ final class TurboStatusView: PanelRowView {
         titleAttr.draw(at: NSPoint(x: pad + 10, y: 12))
 
         // 2. Subtitle
-        let subAttr = UIStyle.text("Ventoinha a ~10.000 RPM · Resfriamento ininterrupto",
+        let subAttr = UIStyle.text(subtitleText,
                                    NSFont.systemFont(ofSize: 9.5, weight: .regular),
                                    .secondaryLabelColor)
         subAttr.draw(at: NSPoint(x: pad + 10, y: 28))

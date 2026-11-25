@@ -19,6 +19,11 @@ func runTests() {
         ("Black Shark MagCooler 5 Pro", "bs-magcooler-5pro"),
         ("BR42-Cooler", "bs-magcooler-5pro"),
         ("BS 5Pro", "bs-magcooler-5pro"),
+        ("Black Shark MagCooler 6Max", "bs-magcooler-6max"),
+        ("Fun Cooler 6Max", "bs-magcooler-6max"),
+        ("BLACKSHARK_COOLER_BR64", "bs-magcooler-6max"),
+        ("BR64-Cooler", "bs-magcooler-6max"),
+        ("BS 6Max", "bs-magcooler-6max"),
         ("Black Shark 4 Pro", "bs-magcooler-4pro"),
         ("Flydigi B8X", "fd-b8x"),
         ("feizhi b8x", "fd-b8x"),
@@ -50,7 +55,9 @@ func runTests() {
     let bsAdv = [CBAdvertisementDataManufacturerDataKey: bsMfgData]
     let bsMatched = DeviceProfile.matching(deviceName: "BR42-Cooler", advertisementData: bsAdv)
     assert(bsMatched != nil && bsMatched!.brand == "Black Shark", "Manufacturer data matching failed for Black Shark")
-    print("  ✅ Manufacturer Data: Black Shark [0x8F, 0x03] -> \(bsMatched!.modelName)")
+    let bs6Matched = DeviceProfile.matching(deviceName: "BR64-Cooler", advertisementData: bsAdv)
+    assert(bs6Matched != nil && bs6Matched!.id == "bs-magcooler-6max", "Manufacturer data matching failed for Black Shark 6 Max (BR64)")
+    print("  ✅ Manufacturer Data: Black Shark [0x8F, 0x03] -> \(bsMatched!.modelName) & \(bs6Matched!.modelName)")
 
     // 3. Service UUID Identifications
     let fdServices = [CBUUID(string: "0000FFE0-0000-1000-8000-00805F9B34FB")]
@@ -228,6 +235,9 @@ func runTests() {
     print("\n📡 Testing Multi-Brand Telemetry Capabilities...")
     assert(DeviceProfile.vcCooler6Pro.hasTelemetryStream, "REDMAGIC 6 Pro must have telemetry stream")
     assert(!DeviceProfile.magcooler5Pro.hasTelemetryStream, "REDMAGIC 5 Pro does not broadcast continuous telemetry stream")
+    assert(DeviceProfile.blackSharkMagCooler6Max.hasTelemetryStream, "Black Shark 6 Max must have telemetry stream")
+    assert(DeviceProfile.blackSharkMagCooler6Max.ratedWatts == 40, "Black Shark 6 Max must be rated at 40W")
+    assert(!DeviceProfile.blackSharkMagCooler6Max.hasPhysicalPowerSwitch, "Black Shark 6 Max does not have physical power switch")
     assert(DeviceProfile.blackSharkMagCooler5Pro.hasTelemetryStream, "Black Shark 5 Pro must have telemetry stream")
     assert(DeviceProfile.blackSharkMagCooler4Pro.hasTelemetryStream, "Black Shark 4 Pro must have telemetry stream")
     assert(DeviceProfile.flydigiB8X.hasTelemetryStream, "Flydigi B8X must have telemetry stream")
@@ -408,6 +418,100 @@ func runTests() {
     assert(aneFallback.isActive && FrequencyMonitor.formatANEStatus(aneFallback) == "Ativo")
 
     print("  ✅ FrequencyMonitor: Clocks (MHz/GHz) & ANE telemetry summarization verified")
+
+    // K. Black Shark MagCooler 6 Max (BR64) Driver Encoding, Lighting, PD & Telemetry Decoding
+    let br64Driver = BlackSharkDriver(profile: .blackSharkMagCooler6Max)
+    let bs5ProDriver = BlackSharkDriver(profile: .blackSharkMagCooler5Pro)
+    assert(br64Driver.writableUUIDs.contains(CBUUID(string: "0000A001-0000-1000-8000-00805F9B34FB")))
+    assert(br64Driver.notifyingUUIDs.contains(CBUUID(string: "0000A002-0000-1000-8000-00805F9B34FB")))
+    assert(br64Driver.telemetryPollCommand() == [0x05, 0x06, 0x20, 0x00, 0x00])
+    assert(br64Driver.br64InitialQueryCommands() == [
+        [0x05, 0x07, 0x08, 0x00, 0x00],
+        [0x05, 0x05, 0x08, 0x00, 0x00],
+        [0x05, 0x01, 0x20, 0x00, 0x00],
+        [0x05, 0x04, 0x30, 0x00, 0x00]
+    ])
+    assert(br64Driver.coolingCommands(mode: .off, fanPercent: 0) == [[0x05, 0x07, 0x00, 0x00, 0x01]])
+    assert(br64Driver.coolingCommands(mode: .low, fanPercent: 40) == [
+        [0x05, 0x07, 0x00, 0x00, 0x00],
+        [0x06, 0x05, 0x00, 0x00, 0x04, 0x01]
+    ])
+    assert(br64Driver.coolingCommands(mode: .medium, fanPercent: 75) == [
+        [0x05, 0x07, 0x00, 0x00, 0x00],
+        [0x06, 0x05, 0x00, 0x00, 0x04, 0x04]
+    ])
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 90) == [
+        [0x05, 0x07, 0x00, 0x00, 0x00],
+        [0x06, 0x05, 0x00, 0x00, 0x04, 0x05]
+    ])
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 100) == [
+        [0x05, 0x07, 0x00, 0x00, 0x00],
+        [0x06, 0x05, 0x00, 0x00, 0x01, 0x00]
+    ])
+    assert(bs5ProDriver.coolingCommands(mode: .max, fanPercent: 100) == [
+        [0x05, 0x07, 0x00, 0x00, 0x00],
+        [0x06, 0x05, 0x00, 0x00, 0x04, 0x05]
+    ])
+    assert(br64Driver.br64WorkModeCommand(.ai) == [0x06, 0x05, 0x00, 0x00, 0x02, 0x00])
+    assert(br64Driver.br64WorkModeCommand(.silent) == [0x06, 0x05, 0x00, 0x00, 0x03, 0x00])
+    assert(br64Driver.br64LowTecStatusCommand(enabled: true) == [0x05, 0x06, 0x00, 0x00, 0x01])
+    assert(br64Driver.br64LowTecTemperatureCommand(-5) == [0x05, 0x06, 0x10, 0x00, 0xFB])
+
+    // Lighting mode + all standard effects (rainbow, colorfulBreath, monochromeBreath, steady)
+    assert(br64Driver.v2LightModeCommand(enabled: true) == [0x05, 0x01, 0x00, 0x00, 0x00])
+    assert(br64Driver.v2LightModeCommand(enabled: false) == [0x05, 0x01, 0x00, 0x00, 0x03])
+    let br64Rgb = RGB(r: 0x10, g: 0x80, b: 0xFF)
+    assert(br64Driver.v2LightParamFrame(effect: 1, color: br64Rgb) == [
+        0x10, 0x01, 0x10, 0x00, 0x00, 0x07, 0x14, 0x05, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    ])
+    assert(br64Driver.v2LightParamFrame(effect: 2, color: br64Rgb) == [
+        0x10, 0x01, 0x10, 0x00, 0x00, 0x0A, 0x58, 0x1B, 0x64, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    ])
+    assert(br64Driver.v2LightParamFrame(effect: 3, color: br64Rgb) == [
+        0x10, 0x01, 0x10, 0x00, 0x00, 0x0A, 0x58, 0x1B, 0x64, 0x01, 0x10, 0x80, 0xFF, 0x00, 0x00, 0x00
+    ])
+    assert(br64Driver.v2LightParamFrame(r: 0x10, g: 0x80, b: 0xFF) == [
+        0x10, 0x01, 0x10, 0x00, 0x00, 0x09, 0xff, 0x00, 0x64, 0x01, 0x10, 0x80, 0xff, 0x00, 0x00, 0x00
+    ])
+
+    // Telemetry decoding (cold/hot/RPM/watts/inputVoltsTier) + PD tier throttling
+    if case .telemetry(let br64Telem) = br64Driver.parseUpdate([0x0B, 0x06, 0x20, 0x00, 0xFE, 0x28, 0x88, 0x13, 0x28, 0x0F, 0x02]) {
+        assert(br64Telem.coldC == -2 && br64Telem.hotC == 40 && br64Telem.fanRPM == 5000,
+               "Expected -2°C cold, 40°C hot, 5000 RPM for BR64 telemetry, got \(br64Telem)")
+        assert(br64Telem.watts == 40 && br64Telem.inputVoltsTier == 15,
+               "Expected 40W & PD tier 15, got watts=\(String(describing: br64Telem.watts)) vin=\(String(describing: br64Telem.inputVoltsTier))")
+    } else {
+        assertionFailure("Expected BR64 telemetry packet to decode cleanly even with non-0x89 header byte")
+    }
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 100)[1] == [0x06, 0x05, 0x00, 0x00, 0x01, 0x00])
+
+    _ = br64Driver.parseUpdate([0x0B, 0x06, 0x20, 0x00, 0x02, 0x24, 0x10, 0x0E, 0x1E, 0x0C, 0x01]) // 30W (tier 12)
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 100)[1] == [0x06, 0x05, 0x00, 0x00, 0x01, 0x00])
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 90)[1] == [0x06, 0x05, 0x00, 0x00, 0x04, 0x04])
+
+    _ = br64Driver.parseUpdate([0x0B, 0x06, 0x20, 0x00, 0x06, 0x22, 0xE8, 0x03, 0x14, 0x0A, 0x01]) // <30W (tier 10)
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 100)[1] == [0x06, 0x05, 0x00, 0x00, 0x04, 0x03])
+
+    _ = br64Driver.parseUpdate([0x0B, 0x06, 0x20, 0x00, 0x0A, 0x20, 0xE8, 0x03, 0x0A, 0x05, 0x01]) // 5V (tier 5)
+    assert(br64Driver.coolingCommands(mode: .max, fanPercent: 100)[1] == [0x06, 0x05, 0x00, 0x00, 0x04, 0x01])
+
+    // Write ACKs (`0x00`) must return `.none`, while query reports (`0x08`) update state
+    assert(br64Driver.parseUpdate([0x06, 0x05, 0x00, 0x00, 0x01, 0x00]) == .none)
+    assert(br64Driver.parseUpdate([0x05, 0x07, 0x00, 0x00, 0x01]) == .none)
+    assert(br64Driver.parseUpdate([0x06, 0x05, 0x08, 0x00, 0x01, 0x00]) == .mode(.max))
+    assert(br64Driver.reportedWorkMode == .overclock)
+    assert(br64Driver.parseUpdate([0x06, 0x05, 0x08, 0x00, 0x03, 0x00]) == .mode(.low))
+    assert(br64Driver.reportedWorkMode == .silent)
+    assert(br64Driver.parseUpdate([0x05, 0x07, 0x08, 0x00, 0x01]) == .mode(.off))
+
+    // CoolerPanelView telemetry formatting & PD insufficient-power note
+    let br64UiTelem = CoolerTelemetry(coldC: -2, hotC: 40, ambientC: 0, fanRPM: 5000, watts: 40, inputVoltsTier: 15)
+    assert(CoolerPanelView.formatTelemetry(br64UiTelem) == "Frio -2°C / Hot 40°C · 5000 RPM · 40W")
+    let basicUiTelem = CoolerTelemetry(coldC: 5, hotC: 32, ambientC: 0, fanRPM: nil)
+    assert(CoolerPanelView.formatTelemetry(basicUiTelem) == "Frio 5°C / Hot 32°C")
+    assert(CoolerPanelView.Note.insufficientPower.text.contains("30W"))
+
+    print("  ✅ Black Shark 6 Max (BR64): Profile, A0A0 v2 commands, LED modes, PD capping & telemetry verified")
 
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
