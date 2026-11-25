@@ -362,6 +362,14 @@ func runTests() {
     assert(SystemInfo.formatChipName("Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz") == "Intel Core i7")
     print("  ✅ SystemInfo Hardware Detection: Model '\(SystemInfo.macModel)' · Chip '\(SystemInfo.chipName ?? "unknown")'")
 
+    // J. FrequencyMonitor Formatting & Telemetry
+    assert(FrequencyMonitor.formatFreq(0) == "")
+    assert(FrequencyMonitor.formatFreq(740) == "740 MHz")
+    assert(FrequencyMonitor.formatFreq(1000) == "1.0 GHz")
+    assert(FrequencyMonitor.formatFreq(2600) == "2.6 GHz")
+    assert(FrequencyMonitor.formatFreq(3500) == "3.5 GHz")
+    print("  ✅ FrequencyMonitor: Real-time clock formatters (MHz/GHz) verified")
+
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }
 

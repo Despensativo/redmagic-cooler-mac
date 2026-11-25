@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var led: LedController!
     var updates: UpdateChecker!
     var installer: UpdateInstaller!
+    var frequencyMonitor: FrequencyMonitor!
 
     // ── Menu ─────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         loadSettings()
 
+        frequencyMonitor = FrequencyMonitor.shared
         ble = CoolerBLEManager()
         ble.delegate = self
         led = LedController(ble: ble)
@@ -262,10 +264,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // ── Tick ─────────────────────────────────────────────────────────────────
 
-    /// Reads all hardware thermal sensors and appends the reading to the 10-minute rolling window.
+    /// Reads all hardware thermal sensors and appends the reading to the 10-minute rolling window,
+    /// and samples active CPU/GPU hardware clock frequencies via IOReport.
     func sampleThermal() {
         thermal = ThermalMonitor.read()
         thermalHistory.record(thermal)
+        frequencyMonitor?.sample()
     }
 
     /// The master loop, once a second: sample temperature, run the autopilot,

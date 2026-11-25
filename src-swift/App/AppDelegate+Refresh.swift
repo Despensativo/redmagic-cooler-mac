@@ -210,9 +210,7 @@ extension AppDelegate {
 
     func refreshStatusItemButton() {
         guard let button = statusItem.button else { return }
-        let temperature = ble.isConnected
-            ? SystemInfo.formatTemp(thermal.dieTemperatureC, degreeOnly: true)
-            : ""
+        let temperature = SystemInfo.formatTemp(thermal.dieTemperatureC, degreeOnly: true)
 
         button.imagePosition = temperature.isEmpty ? .imageOnly : .imageLeading
         button.title = temperature.isEmpty ? "" : " \(temperature)"
@@ -232,6 +230,16 @@ extension AppDelegate {
             button.image = RedMagicLogo.image(size: 16, color: markColor)
         }
         button.contentTintColor = nil
+
+        let status = ble.isConnected
+            ? "\(ble.profile?.modelName ?? "Cooler"): Conectado (\(ble.fanPercent)% fan)"
+            : "Cooler: Desconectado"
+        var toolTipParts = ["Smart Cooler Control", status, "SoC: \(SystemInfo.formatTemp(thermal.dieTemperatureC))"]
+        if let freq = frequencyMonitor?.current {
+            if freq.cpuMHz > 0 { toolTipParts.append("CPU: \(freq.cpuFormatted)") }
+            if freq.gpuMHz > 0 { toolTipParts.append("GPU: \(freq.gpuFormatted)") }
+        }
+        button.toolTip = toolTipParts.joined(separator: "\n")
     }
 
     // ── Status card and cooler panel ─────────────────────────────────────────
@@ -242,6 +250,7 @@ extension AppDelegate {
         statusCard.panelSegment = pickingDevice ? .only : .top
         coolerPanel.panelSegment = .bottom
 
+        let freq = frequencyMonitor?.current
         statusCard.update(StatusCardView.ViewModel(
             dieTempC: thermal.dieTemperatureC,
             thermalState: thermal.thermalState,
@@ -250,7 +259,9 @@ extension AppDelegate {
             socTempC: thermal.socTempC,
             batteryTempC: thermal.batteryTempC,
             storageTempC: thermal.storageTempC,
-            history: thermalHistory.snapshot()))
+            history: thermalHistory.snapshot(),
+            cpuMHz: (freq?.cpuMHz ?? 0) > 0 ? freq?.cpuMHz : nil,
+            gpuMHz: (freq?.gpuMHz ?? 0) > 0 ? freq?.gpuMHz : nil))
 
         let statusDetail: String?
         if connected {

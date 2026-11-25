@@ -19,6 +19,8 @@ final class StatusCardView: PanelRowView {
         var batteryTempC: Double? = nil
         var storageTempC: Double? = nil
         var history: ThermalHistorySnapshot? = nil
+        var cpuMHz: Int? = nil
+        var gpuMHz: Int? = nil
     }
 
     private enum SensorKind {
@@ -79,8 +81,16 @@ final class StatusCardView: PanelRowView {
         }
 
         var tipParts: [String] = []
-        if let cpu = model.cpuTempC { tipParts.append("CPU: \(String(format: "%.1f°C", cpu))") }
-        if let gpu = model.gpuTempC { tipParts.append("GPU: \(String(format: "%.1f°C", gpu))") }
+        if let cpu = model.cpuTempC {
+            var s = "CPU: \(String(format: "%.1f°C", cpu))"
+            if let mhz = model.cpuMHz, mhz > 0 { s += " (\(FrequencyMonitor.formatFreq(mhz)))" }
+            tipParts.append(s)
+        }
+        if let gpu = model.gpuTempC {
+            var s = "GPU: \(String(format: "%.1f°C", gpu))"
+            if let mhz = model.gpuMHz, mhz > 0 { s += " (\(FrequencyMonitor.formatFreq(mhz)))" }
+            tipParts.append(s)
+        }
         if let soc = model.socTempC { tipParts.append("SoC: \(String(format: "%.1f°C", soc))") }
         if let bat = model.batteryTempC { tipParts.append("Bateria: \(String(format: "%.1f°C", bat))") }
         if let ssd = model.storageTempC { tipParts.append("SSD: \(String(format: "%.1f°C", ssd))") }
@@ -103,10 +113,22 @@ final class StatusCardView: PanelRowView {
         }
 
         if let s = resolve(model.history?.cpu, fallback: model.cpuTempC) {
-            rows.append(TableRow(label: "CPU", stats: s, kind: .cpu))
+            let label: String
+            if let mhz = model.cpuMHz, mhz > 0 {
+                label = "CPU · \(FrequencyMonitor.formatFreq(mhz))"
+            } else {
+                label = "CPU"
+            }
+            rows.append(TableRow(label: label, stats: s, kind: .cpu))
         }
         if let s = resolve(model.history?.gpu, fallback: model.gpuTempC) {
-            rows.append(TableRow(label: "GPU", stats: s, kind: .gpu))
+            let label: String
+            if let mhz = model.gpuMHz, mhz > 0 {
+                label = "GPU · \(FrequencyMonitor.formatFreq(mhz))"
+            } else {
+                label = "GPU"
+            }
+            rows.append(TableRow(label: label, stats: s, kind: .gpu))
         }
         if let s = resolve(model.history?.battery, fallback: model.batteryTempC) {
             rows.append(TableRow(label: "Bateria", stats: s, kind: .battery))
