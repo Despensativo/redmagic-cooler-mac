@@ -236,8 +236,14 @@ extension AppDelegate {
             : "Cooler: Desconectado"
         var toolTipParts = ["Smart Cooler Control", status, "SoC: \(SystemInfo.formatTemp(thermal.dieTemperatureC))"]
         if let freq = frequencyMonitor?.current {
-            if freq.cpuMHz > 0 { toolTipParts.append("CPU: \(freq.cpuFormatted)") }
-            if freq.gpuMHz > 0 { toolTipParts.append("GPU: \(freq.gpuFormatted)") }
+            if freq.cpuMHz > 0 {
+                let maxInfo = freq.maxCpuMHz > 0 ? " (Máx \(FrequencyMonitor.formatFreq(freq.maxCpuMHz)))" : ""
+                toolTipParts.append("CPU: \(freq.cpuFormatted)\(maxInfo)")
+            }
+            if freq.gpuMHz > 0 {
+                let maxInfo = freq.maxGpuMHz > 0 ? " (Máx \(FrequencyMonitor.formatFreq(freq.maxGpuMHz)))" : ""
+                toolTipParts.append("GPU: \(freq.gpuFormatted)\(maxInfo)")
+            }
         }
         button.toolTip = toolTipParts.joined(separator: "\n")
     }
@@ -261,7 +267,9 @@ extension AppDelegate {
             storageTempC: thermal.storageTempC,
             history: thermalHistory.snapshot(),
             cpuMHz: (freq?.cpuMHz ?? 0) > 0 ? freq?.cpuMHz : nil,
-            gpuMHz: (freq?.gpuMHz ?? 0) > 0 ? freq?.gpuMHz : nil))
+            gpuMHz: (freq?.gpuMHz ?? 0) > 0 ? freq?.gpuMHz : nil,
+            maxCpuMHz: (freq?.maxCpuMHz ?? 0) > 0 ? freq?.maxCpuMHz : nil,
+            maxGpuMHz: (freq?.maxGpuMHz ?? 0) > 0 ? freq?.maxGpuMHz : nil))
 
         let statusDetail: String?
         if connected {

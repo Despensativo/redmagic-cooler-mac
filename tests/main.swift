@@ -368,7 +368,10 @@ func runTests() {
     assert(FrequencyMonitor.formatFreq(1000) == "1.0 GHz")
     assert(FrequencyMonitor.formatFreq(2600) == "2.6 GHz")
     assert(FrequencyMonitor.formatFreq(3500) == "3.5 GHz")
-    print("  ✅ FrequencyMonitor: Real-time clock formatters (MHz/GHz) verified")
+    assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 2600, maxMHz: 4500) == "2.6 / 4.5 GHz")
+    assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 740, maxMHz: 1600) == "740 MHz / 1.6 GHz")
+    assert(FrequencyMonitor.formatCurrentWithMax(currentMHz: 0, maxMHz: 4500) == "Máx 4.5 GHz")
+    print("  ✅ FrequencyMonitor: Real-time clock formatters (MHz/GHz & Current/Max) verified")
 
     print("\n🎉 ALL TESTS PASSED! Deterministic Step-Ladder, Asymmetric Hysteresis, Dwell & Velocity Bypass, Universal Condensation Safety Governor & Multi-Brand Isolation verified.")
 }

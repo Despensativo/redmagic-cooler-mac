@@ -21,6 +21,8 @@ final class StatusCardView: PanelRowView {
         var history: ThermalHistorySnapshot? = nil
         var cpuMHz: Int? = nil
         var gpuMHz: Int? = nil
+        var maxCpuMHz: Int? = nil
+        var maxGpuMHz: Int? = nil
     }
 
     private enum SensorKind {
@@ -83,12 +85,18 @@ final class StatusCardView: PanelRowView {
         var tipParts: [String] = []
         if let cpu = model.cpuTempC {
             var s = "CPU: \(String(format: "%.1f°C", cpu))"
-            if let mhz = model.cpuMHz, mhz > 0 { s += " (\(FrequencyMonitor.formatFreq(mhz)))" }
+            if let mhz = model.cpuMHz, mhz > 0 {
+                let maxStr = (model.maxCpuMHz ?? 0) > 0 ? " (Máx: \(FrequencyMonitor.formatFreq(model.maxCpuMHz!)))" : ""
+                s += " @ \(FrequencyMonitor.formatFreq(mhz))\(maxStr)"
+            }
             tipParts.append(s)
         }
         if let gpu = model.gpuTempC {
             var s = "GPU: \(String(format: "%.1f°C", gpu))"
-            if let mhz = model.gpuMHz, mhz > 0 { s += " (\(FrequencyMonitor.formatFreq(mhz)))" }
+            if let mhz = model.gpuMHz, mhz > 0 {
+                let maxStr = (model.maxGpuMHz ?? 0) > 0 ? " (Máx: \(FrequencyMonitor.formatFreq(model.maxGpuMHz!)))" : ""
+                s += " @ \(FrequencyMonitor.formatFreq(mhz))\(maxStr)"
+            }
             tipParts.append(s)
         }
         if let soc = model.socTempC { tipParts.append("SoC: \(String(format: "%.1f°C", soc))") }
@@ -115,7 +123,13 @@ final class StatusCardView: PanelRowView {
         if let s = resolve(model.history?.cpu, fallback: model.cpuTempC) {
             let label: String
             if let mhz = model.cpuMHz, mhz > 0 {
-                label = "CPU · \(FrequencyMonitor.formatFreq(mhz))"
+                if let maxM = model.maxCpuMHz, maxM > 0 {
+                    label = "CPU · \(FrequencyMonitor.formatCurrentWithMax(currentMHz: mhz, maxMHz: maxM))"
+                } else {
+                    label = "CPU · \(FrequencyMonitor.formatFreq(mhz))"
+                }
+            } else if let maxM = model.maxCpuMHz, maxM > 0 {
+                label = "CPU · Máx \(FrequencyMonitor.formatFreq(maxM))"
             } else {
                 label = "CPU"
             }
@@ -124,7 +138,13 @@ final class StatusCardView: PanelRowView {
         if let s = resolve(model.history?.gpu, fallback: model.gpuTempC) {
             let label: String
             if let mhz = model.gpuMHz, mhz > 0 {
-                label = "GPU · \(FrequencyMonitor.formatFreq(mhz))"
+                if let maxM = model.maxGpuMHz, maxM > 0 {
+                    label = "GPU · \(FrequencyMonitor.formatCurrentWithMax(currentMHz: mhz, maxMHz: maxM))"
+                } else {
+                    label = "GPU · \(FrequencyMonitor.formatFreq(mhz))"
+                }
+            } else if let maxM = model.maxGpuMHz, maxM > 0 {
+                label = "GPU · Máx \(FrequencyMonitor.formatFreq(maxM))"
             } else {
                 label = "GPU"
             }

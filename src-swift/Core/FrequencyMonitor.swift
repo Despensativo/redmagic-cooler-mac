@@ -15,6 +15,8 @@ public final class FrequencyMonitor {
         public var gpuMHz: Int
         public var pCpuMHz: Int
         public var eCpuMHz: Int
+        public var maxCpuMHz: Int
+        public var maxGpuMHz: Int
 
         public var cpuFormatted: String {
             FrequencyMonitor.formatFreq(cpuMHz)
@@ -22,6 +24,14 @@ public final class FrequencyMonitor {
 
         public var gpuFormatted: String {
             FrequencyMonitor.formatFreq(gpuMHz)
+        }
+
+        public var cpuWithMaxFormatted: String {
+            FrequencyMonitor.formatCurrentWithMax(currentMHz: cpuMHz, maxMHz: maxCpuMHz)
+        }
+
+        public var gpuWithMaxFormatted: String {
+            FrequencyMonitor.formatCurrentWithMax(currentMHz: gpuMHz, maxMHz: maxGpuMHz)
         }
     }
 
@@ -31,6 +41,36 @@ public final class FrequencyMonitor {
             return String(format: "%.1f GHz", Double(mhz) / 1000.0)
         }
         return "\(mhz) MHz"
+    }
+
+    public static func formatCurrentWithMax(currentMHz: Int, maxMHz: Int) -> String {
+        guard currentMHz > 0 else {
+            return maxMHz > 0 ? "Máx \(formatFreq(maxMHz))" : ""
+        }
+        guard maxMHz > 0 else {
+            return formatFreq(currentMHz)
+        }
+
+        if currentMHz >= 1000 && maxMHz >= 1000 {
+            let curG = Double(currentMHz) / 1000.0
+            let maxG = Double(maxMHz) / 1000.0
+            return String(format: "%.1f / %.1f GHz", curG, maxG)
+        } else if currentMHz < 1000 && maxMHz >= 1000 {
+            let maxG = Double(maxMHz) / 1000.0
+            return String(format: "%d MHz / %.1f GHz", currentMHz, maxG)
+        } else {
+            return "\(currentMHz) / \(maxMHz) MHz"
+        }
+    }
+
+    public var maxCpuMHz: Int {
+        let pMax = pCpuFreqs.max() ?? 0
+        let eMax = eCpuFreqs.max() ?? 0
+        return Int(max(pMax, eMax))
+    }
+
+    public var maxGpuMHz: Int {
+        return Int(gpuFreqs.max() ?? 0)
     }
 
     private var eCpuFreqs: [UInt32] = []
@@ -64,12 +104,20 @@ public final class FrequencyMonitor {
     private var gpuChannels: CFDictionary?
     private var prevGpuSample: CFDictionary?
 
-    public private(set) var current: Reading = Reading(cpuMHz: 0, gpuMHz: 0, pCpuMHz: 0, eCpuMHz: 0)
+    public private(set) var current: Reading = Reading(cpuMHz: 0, gpuMHz: 0, pCpuMHz: 0, eCpuMHz: 0, maxCpuMHz: 0, maxGpuMHz: 0)
 
     public init() {
         loadLibIOReport()
         loadDvfsTables()
         setupSubscriptions()
+        current = Reading(
+            cpuMHz: 0,
+            gpuMHz: 0,
+            pCpuMHz: 0,
+            eCpuMHz: 0,
+            maxCpuMHz: maxCpuMHz,
+            maxGpuMHz: maxGpuMHz
+        )
     }
 
     private func loadLibIOReport() {
@@ -238,7 +286,9 @@ public final class FrequencyMonitor {
             cpuMHz: cpuMHz,
             gpuMHz: gpuMHz,
             pCpuMHz: pCpuMHz,
-            eCpuMHz: eCpuMHz
+            eCpuMHz: eCpuMHz,
+            maxCpuMHz: maxCpuMHz,
+            maxGpuMHz: maxGpuMHz
         )
         return current
     }
